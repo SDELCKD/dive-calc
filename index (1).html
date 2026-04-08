@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0c1222">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DiveCalc">
+<title>다이빙 계산기</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: linear-gradient(165deg, #0c1222 0%, #0a0f1a 40%, #0d1525 100%);
+    color: #fff; min-height: 100vh; overflow-x: hidden;
+    padding-bottom: 120px; padding-top: env(safe-area-inset-top);
+  }
+  input[type="number"], select {
+    width: 100%; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+    color: #fff; font-size: 16px; font-weight: 600; outline: none;
+    font-family: inherit; margin-bottom: 4px; -webkit-appearance: none;
+  }
+  input[type="number"]:focus, select:focus { border-color: rgba(14,165,233,0.4); }
+  select { appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  select option { background: #1a2035; color: #fff; }
+  .label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.4); margin-bottom: 6px; font-weight: 600; }
+  .result-card { padding: 20px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+  .breakdown-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: rgba(255,255,255,0.6); border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .header { padding: 32px 20px 24px; text-align: center; position: relative; }
+  .header-glow { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 200px; height: 200px; background: radial-gradient(circle, rgba(14,165,233,0.08) 0%, transparent 70%); pointer-events: none; }
+  .header-sub { font-size: 13px; letter-spacing: 4px; color: rgba(14,165,233,0.6); text-transform: uppercase; margin-bottom: 6px; }
+  .header-title { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(135deg, #fff 30%, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .tabs { display: flex; gap: 4px; padding: 0 12px; margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { flex: 0 0 auto; padding: 10px 16px; border-radius: 12px; border: 1px solid transparent; background: transparent; color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; font-family: inherit; }
+  .tab-btn.active { border-color: rgba(14,165,233,0.3); background: rgba(14,165,233,0.1); color: #0ea5e9; }
+  .content { padding: 0 16px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .pill-group { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .pill { padding: 6px 14px; border-radius: 20px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+  .pill.active { background: #0ea5e9; color: #fff; }
+  .pill.inactive { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
+  .result-box { padding: 10px 12px; border-radius: 8px; background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0ea5e9; font-size: 16px; font-weight: 700; min-height: 40px; display: flex; align-items: center; }
+  .add-btn { padding: 4px 14px; border-radius: 6px; border: none; background: rgba(14,165,233,0.15); color: #0ea5e9; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .remove-btn { padding: 4px 10px; border-radius: 6px; border: none; background: rgba(239,68,68,0.15); color: #ef4444; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .status-ok { margin-top: 12px; padding: 8px 14px; border-radius: 8px; background: rgba(34,197,94,0.12); color: #22c55e; font-size: 14px; font-weight: 600; text-align: center; }
+  .status-bad { margin-top: 12px; padding: 8px 14px; border-radius: 8px; background: rgba(239,68,68,0.12); color: #ef4444; font-size: 14px; font-weight: 600; text-align: center; }
+  .info-box { padding: 10px 14px; border-radius: 8px; background: rgba(255,255,255,0.04); font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+  .stat-box { padding: 10px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); text-align: center; }
+  .stat-label { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.8); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 8px 6px; text-align: center; color: rgba(255,255,255,0.4); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  td { padding: 8px 6px; text-align: center; color: rgba(255,255,255,0.6); }
+  .ccr-intro { padding: 12px 16px; border-radius: 10px; background: rgba(14,165,233,0.06); border: 1px solid rgba(14,165,233,0.15); margin-bottom: 20px; font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; }
+  input[type="range"] { width: 100%; accent-color: #0ea5e9; height: 36px; }
+  .deco-row { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
+  .deco-row input { margin-bottom: 0; flex: 1; }
+  .deco-row span { color: rgba(255,255,255,0.3); font-size: 13px; flex-shrink: 0; }
+  .convert-wrap { display: flex; align-items: center; gap: 12px; }
+  .convert-wrap > div { flex: 1; }
+  .convert-arrow { font-size: 24px; color: #0ea5e9; margin-top: 20px; }
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-bottom: 12px; }
+  .total-row { border-top: 1px solid rgba(255,255,255,0.1); margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .range-labels { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.3); }
+  .mod-results { display: flex; justify-content: space-around; text-align: center; }
+  .mod-divider { width: 1px; background: rgba(255,255,255,0.1); }
+  .end-main { display: flex; justify-content: center; align-items: baseline; gap: 12px; text-align: center; margin-bottom: 20px; }
+  .end-arrow { font-size: 24px; color: #0ea5e9; padding: 0 8px; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-glow"></div>
+  <div class="header-sub">DIVE</div>
+  <h1 class="header-title">다이빙 계산기</h1>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="content">
+
+<!-- ==================== 단위 변환 ==================== -->
+<div class="page active" id="page-convert">
+  <div class="pill-group" id="unit-pills"></div>
+  <div class="convert-wrap">
+    <div>
+      <label class="label">FROM</label>
+      <select id="unit-from"></select>
+      <input type="number" id="unit-value" placeholder="값 입력">
+    </div>
+    <div class="convert-arrow">→</div>
+    <div>
+      <label class="label">TO</label>
+      <select id="unit-to"></select>
+      <div class="result-box" id="unit-result">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 가스 소모 ==================== -->
+<div class="page" id="page-gas">
+  <div class="grid-2">
+    <div><label class="label">바텀 수심 (m)</label><input type="number" id="g-bottomDepth" value="30"></div>
+    <div><label class="label">바텀 체류시간 (min)</label><input type="number" id="g-bottomTime" value="20"></div>
+    <div><label class="label">RMV (L/min)</label><input type="number" id="g-rmv" value="20"></div>
+    <div><label class="label">실린더 용량 (L)</label><input type="number" id="g-cylinderSize" value="12"></div>
+    <div><label class="label">상승속도 (m/min)</label><input type="number" id="g-ascentRate" value="9"></div>
+    <div><label class="label">하강속도 (m/min)</label><input type="number" id="g-descentRate" value="20"></div>
+    <div><label class="label">시작 압력 (bar)</label><input type="number" id="g-startPressure" value="200"></div>
+    <div><label class="label">예비량 (bar)</label><input type="number" id="g-reserveBar" value="50"></div>
+  </div>
+  <div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <label class="label" style="margin-bottom:0">감압 정지</label>
+      <button class="add-btn" id="g-addDeco">+ 추가</button>
+    </div>
+    <div id="g-decoList"></div>
+  </div>
+  <div class="result-card" id="g-results"></div>
+</div>
+
+<!-- ==================== RMV ==================== -->
+<div class="page" id="page-rmv">
+  <div class="grid-2">
+    <div><label class="label">실린더 용량 (L)</label><input type="number" id="r-cyl" value="12"></div>
+    <div><label class="label">평균 수심 (m)</label><input type="number" id="r-depth" value="20"></div>
+    <div><label class="label">잠수 시간 (min)</label><input type="number" id="r-time" value="40"></div>
+    <div><label class="label">시작 압력 (bar)</label><input type="number" id="r-startP" value="200"></div>
+  </div>
+  <div><label class="label">종료 압력 (bar)</label><input type="number" id="r-endP" value="80" style="margin-bottom:16px"></div>
+  <div class="result-card" id="r-results"></div>
+</div>
+
+<!-- ==================== MOD ==================== -->
+<div class="page" id="page-mod">
+  <div style="margin-bottom:16px">
+    <label class="label">산소 비율 (FO₂ %): <span id="m-fO2Label">32</span>%</label>
+    <input type="range" min="21" max="100" value="32" id="m-fO2">
+    <div class="range-labels"><span>21% (Air)</span><span>36% (EAN36)</span><span>100% (O₂)</span></div>
+  </div>
+  <div><label class="label">최대 ppO₂</label><input type="number" id="m-ppO2" value="1.4" step="0.1" style="margin-bottom:16px"></div>
+  <div class="result-card" id="m-results"></div>
+</div>
+
+<!-- ==================== 베스트믹스 ==================== -->
+<div class="page" id="page-bestmix">
+  <div class="grid-2">
+    <div><label class="label">목표 수심 (m)</label><input type="number" id="b-targetDepth" value="30"></div>
+    <div><label class="label">최대 ppO₂</label><input type="number" id="b-maxPpO2" value="1.4" step="0.1"></div>
+  </div>
+  <div class="result-card" id="b-results"></div>
+</div>
+
+<!-- ==================== END ==================== -->
+<div class="page" id="page-end">
+  <div class="ccr-intro">
+    🔄 CCR (폐쇄식 리브리더) 사용 시,<br>
+    고정된 ppO₂에서 실제 수심의 질소 노출이<br>
+    공기 잠수 몇 미터에 해당하는지 계산합니다.
+  </div>
+  <div class="grid-2">
+    <div><label class="label">실제 수심 (m)</label><input type="number" id="e-actualDepth" value="40"></div>
+    <div><label class="label">셋포인트 ppO₂ (bar)</label><input type="number" id="e-ppO2" value="1.35" step="0.05"></div>
+  </div>
+  <div class="result-card" id="e-results"></div>
+  <div class="result-card" style="margin-top:16px" id="e-table"></div>
+</div>
+
+</div>
+
+<script>
+// ─── Tab Switching ───
+const TABS = [
+  {id:'convert',label:'단위 변환',icon:'⇄'},
+  {id:'gas',label:'가스 소모',icon:'⛽'},
+  {id:'rmv',label:'RMV',icon:'🫁'},
+  {id:'mod',label:'MOD',icon:'⚠️'},
+  {id:'bestmix',label:'베스트믹스',icon:'🧪'},
+  {id:'end',label:'END',icon:'🔄'},
+];
+let activeTab = 'convert';
+
+function initTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = TABS.map(t =>
+    `<button class="tab-btn${t.id==='convert'?' active':''}" data-tab="${t.id}"><span style="font-size:16px">${t.icon}</span>${t.label}</button>`
+  ).join('');
+  el.addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    activeTab = btn.dataset.tab;
+    el.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===activeTab));
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id==='page-'+activeTab));
+  });
+}
+
+// ─── Helpers ───
+function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+function listen(ids, fn) {
+  ids.forEach(id => document.getElementById(id).addEventListener('input', fn));
+}
+
+// ─── Unit Converter ───
+const UNIT_GROUPS = [
+  {name:'압력',units:[{id:'bar',label:'bar',toBase:v=>v,fromBase:v=>v},{id:'psi',label:'psi',toBase:v=>v/14.5038,fromBase:v=>v*14.5038},{id:'atm',label:'atm',toBase:v=>v*1.01325,fromBase:v=>v/1.01325}]},
+  {name:'수심',units:[{id:'m',label:'미터 (m)',toBase:v=>v,fromBase:v=>v},{id:'ft',label:'피트 (ft)',toBase:v=>v*0.3048,fromBase:v=>v/0.3048},{id:'fsw',label:'fsw',toBase:v=>v*0.3048,fromBase:v=>v/0.3048}]},
+  {name:'온도',units:[{id:'c',label:'°C',toBase:v=>v,fromBase:v=>v},{id:'f',label:'°F',toBase:v=>(v-32)*5/9,fromBase:v=>v*9/5+32}]},
+  {name:'무게',units:[{id:'kg',label:'kg',toBase:v=>v,fromBase:v=>v},{id:'lb',label:'lb',toBase:v=>v*0.453592,fromBase:v=>v/0.453592}]},
+  {name:'부피',units:[{id:'liter',label:'리터 (L)',toBase:v=>v,fromBase:v=>v},{id:'cuft',label:'큐빅피트 (cuft)',toBase:v=>v*28.3168,fromBase:v=>v/28.3168}]},
+];
+let curUG = 0;
+
+function initUnit() {
+  renderPills();
+  renderSelects();
+  document.getElementById('unit-value').addEventListener('input', calcUnit);
+  document.getElementById('unit-from').addEventListener('change', calcUnit);
+  document.getElementById('unit-to').addEventListener('change', calcUnit);
+}
+
+function renderPills() {
+  const el = document.getElementById('unit-pills');
+  el.innerHTML = UNIT_GROUPS.map((g,i) =>
+    `<button class="pill ${i===curUG?'active':'inactive'}" data-idx="${i}">${g.name}</button>`
+  ).join('');
+  el.onclick = e => {
+    const btn = e.target.closest('.pill');
+    if (!btn) return;
+    curUG = parseInt(btn.dataset.idx);
+    renderPills(); renderSelects();
+    document.getElementById('unit-value').value = '';
+    document.getElementById('unit-result').textContent = '—';
+  };
+}
+
+function renderSelects() {
+  const g = UNIT_GROUPS[curUG];
+  const opts = g.units.map(u => `<option value="${u.id}">${u.label}</option>`).join('');
+  document.getElementById('unit-from').innerHTML = opts;
+  document.getElementById('unit-to').innerHTML = opts;
+  if (g.units.length > 1) document.getElementById('unit-to').value = g.units[1].id;
+}
+
+function calcUnit() {
+  const g = UNIT_GROUPS[curUG];
+  const from = g.units.find(u => u.id===document.getElementById('unit-from').value);
+  const to = g.units.find(u => u.id===document.getElementById('unit-to').value);
+  const v = parseFloat(document.getElementById('unit-value').value);
+  document.getElementById('unit-result').textContent = (!isNaN(v)&&from&&to) ? to.fromBase(from.toBase(v)).toFixed(4) : '—';
+}
+
+// ─── Gas Calc ───
+let decoStops = [{depth:6,time:3},{depth:3,time:5}];
+
+function initGas() {
+  listen(['g-bottomDepth','g-bottomTime','g-rmv','g-cylinderSize','g-ascentRate','g-descentRate','g-startPressure','g-reserveBar'], calcGas);
+  document.getElementById('g-addDeco').addEventListener('click', () => {
+    decoStops.push({depth:3,time:3});
+    renderDeco(); calcGas();
+  });
+  renderDeco(); calcGas();
+}
+
+function renderDeco() {
+  const el = document.getElementById('g-decoList');
+  el.innerHTML = '';
+  decoStops.forEach((stop,i) => {
+    const row = document.createElement('div');
+    row.className = 'deco-row';
+
+    const dInp = document.createElement('input');
+    dInp.type = 'number'; dInp.value = stop.depth;
+    dInp.addEventListener('input', () => { decoStops[i].depth = parseFloat(dInp.value)||0; calcGas(); });
+
+    const tInp = document.createElement('input');
+    tInp.type = 'number'; tInp.value = stop.time;
+    tInp.addEventListener('input', () => { decoStops[i].time = parseFloat(tInp.value)||0; calcGas(); });
+
+    const rmBtn = document.createElement('button');
+    rmBtn.className = 'remove-btn'; rmBtn.textContent = '✕';
+    rmBtn.addEventListener('click', () => { decoStops.splice(i,1); renderDeco(); calcGas(); });
+
+    const s1 = document.createElement('span'); s1.textContent = 'm /';
+    const s2 = document.createElement('span'); s2.textContent = 'min';
+
+    row.append(dInp, s1, tInp, s2, rmBtn);
+    el.appendChild(row);
+  });
+}
+
+function calcGas() {
+  const bd=gv('g-bottomDepth'),bt=gv('g-bottomTime'),rmv=gv('g-rmv');
+  const cyl=gv('g-cylinderSize'),ar=gv('g-ascentRate'),dr=gv('g-descentRate');
+  const sp=gv('g-startPressure'),rb=gv('g-reserveBar');
+
+  const dt = dr>0?bd/dr:0;
+  const dATA = 1+(bd/2)/10;
+  const dG = rmv*dATA*dt;
+  const bATA = 1+bd/10;
+  const bG = rmv*bATA*bt;
+  const sr = ar>0?dr/ar:0;
+  const aG = dG*sr;
+  let dcG = 0;
+  decoStops.forEach(s => { dcG += rmv*(1+s.depth/10)*s.time; });
+  const tL = dG+bG+aG+dcG;
+  const tB = cyl>0?tL/cyl:0;
+  const avail = sp-rb;
+  const ok = tB<=avail;
+  const c = v => cyl>0?(v/cyl).toFixed(1):'0.0';
+
+  document.getElementById('g-results').innerHTML =
+    `<div class="section-title">계산 결과</div>
+    <div class="breakdown-row"><span>하강 구간</span><span>${dG.toFixed(1)} L (${c(dG)} bar)</span></div>
+    <div class="breakdown-row"><span>바텀 구간</span><span>${bG.toFixed(1)} L (${c(bG)} bar)</span></div>
+    <div class="breakdown-row"><span>상승 구간 (×${sr.toFixed(1)})</span><span>${aG.toFixed(1)} L (${c(aG)} bar)</span></div>
+    ${dcG>0?`<div class="breakdown-row"><span>감압 정지</span><span>${dcG.toFixed(1)} L (${c(dcG)} bar)</span></div>`:''}
+    <div class="total-row">
+      <span style="font-size:16px;font-weight:700">총 필요량</span>
+      <span style="font-size:28px;font-weight:800;color:#0ea5e9">${tB.toFixed(1)} bar</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px">
+      <span>총 ${tL.toFixed(1)} L</span><span>사용 가능: ${avail} bar</span>
+    </div>
+    <div class="${ok?'status-ok':'status-bad'}">
+      ${ok?`✓ 충분 — 여유분 ${(avail-tB).toFixed(1)} bar`:`✗ 부족 — ${(tB-avail).toFixed(1)} bar 추가 필요`}
+    </div>`;
+}
+
+// ─── RMV ───
+function initRMV() {
+  listen(['r-cyl','r-depth','r-time','r-startP','r-endP'], calcRMV);
+  calcRMV();
+}
+
+function calcRMV() {
+  const cyl=gv('r-cyl'),d=gv('r-depth'),t=gv('r-time'),sp=gv('r-startP'),ep=gv('r-endP');
+  const ata=1+d/10, gu=(sp-ep)*cyl, rmv=(ata>0&&t>0)?gu/(ata*t):0;
+
+  document.getElementById('r-results').innerHTML =
+    `<div class="section-title">계산 결과</div>
+    <div class="breakdown-row"><span>사용 가스</span><span>${gu.toFixed(0)} L (표면 환산)</span></div>
+    <div class="breakdown-row"><span>평균 ATA</span><span>${ata.toFixed(2)} ATA</span></div>
+    <div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:12px;padding-top:12px;text-align:center">
+      <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:4px">당신의 RMV</div>
+      <div style="font-size:48px;font-weight:800;color:#0ea5e9">${rmv.toFixed(1)}</div>
+      <div style="font-size:16px;color:rgba(255,255,255,0.5)">L/min</div>
+    </div>
+    <div class="info-box" style="margin-top:16px">
+      💡 일반적인 RMV 범위:<br>• 숙련 다이버: 12–16 L/min<br>• 중급 다이버: 16–20 L/min<br>• 초급 다이버: 20–25+ L/min
+    </div>`;
+}
+
+// ─── MOD ───
+function initMOD() {
+  document.getElementById('m-fO2').addEventListener('input', function() {
+    document.getElementById('m-fO2Label').textContent = this.value;
+    calcMOD();
+  });
+  document.getElementById('m-ppO2').addEventListener('input', calcMOD);
+  calcMOD();
+}
+
+function calcMOD() {
+  const f=parseInt(document.getElementById('m-fO2').value), p=parseFloat(document.getElementById('m-ppO2').value)||0;
+  const mod=((p/(f/100))-1)*10, mc=((1.3/(f/100))-1)*10;
+
+  document.getElementById('m-results').innerHTML =
+    `<div class="mod-results">
+      <div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px">MOD (ppO₂ ${p})</div>
+        <div style="font-size:42px;font-weight:800;color:#0ea5e9">${mod.toFixed(1)}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.5)">미터</div>
+      </div>
+      <div class="mod-divider"></div>
+      <div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px">보수적 (ppO₂ 1.3)</div>
+        <div style="font-size:42px;font-weight:800;color:#f59e0b">${mc.toFixed(1)}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.5)">미터</div>
+      </div>
+    </div>
+    <div class="info-box" style="margin-top:16px;${mod<0?'background:rgba(239,68,68,0.12);color:#ef4444':''}">
+      ${mod<0?'⚠️ ppO₂가 산소 비율보다 낮습니다.':`EAN${f} → 최대 ${mod.toFixed(0)}m (ppO₂ ${p})`}
+    </div>`;
+}
+
+// ─── Best Mix ───
+function initBM() {
+  listen(['b-targetDepth','b-maxPpO2'], calcBM);
+  calcBM();
+}
+
+function calcBM() {
+  const td=gv('b-targetDepth'),mp=gv('b-maxPpO2');
+  const ata=1+td/10,best=(mp/ata)*100,cons=(1.3/ata)*100;
+  const cl=v=>Math.min(100,Math.max(0,v));
+
+  document.getElementById('b-results').innerHTML =
+    `<div class="mod-results">
+      <div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px">베스트 믹스 (ppO₂ ${mp})</div>
+        <div style="font-size:42px;font-weight:800;color:#0ea5e9">EAN${cl(best).toFixed(0)}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.5)">${cl(best).toFixed(1)}% O₂</div>
+      </div>
+      <div class="mod-divider"></div>
+      <div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px">보수적 (ppO₂ 1.3)</div>
+        <div style="font-size:42px;font-weight:800;color:#f59e0b">EAN${cl(cons).toFixed(0)}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.5)">${cl(cons).toFixed(1)}% O₂</div>
+      </div>
+    </div>
+    ${best<21?'<div class="status-bad" style="margin-top:12px">⚠️ 이 수심에서는 나이트록스가 적합하지 않습니다 (공기 이하)</div>':''}`;
+}
+
+// ─── END ───
+function initEND() {
+  listen(['e-actualDepth','e-ppO2'], calcEND);
+  calcEND();
+}
+
+function calcEND() {
+  const ad=gv('e-actualDepth'),pp=gv('e-ppO2');
+  const ata=1+ad/10,pn=ata-pp,end=(pn/0.79-1)*10,fo=(pp/ata)*100;
+
+  document.getElementById('e-results').innerHTML =
+    `<div class="section-title">계산 결과</div>
+    <div class="end-main">
+      <div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:4px">실제 수심</div>
+        <div style="font-size:36px;font-weight:800;color:rgba(255,255,255,0.8)">${ad}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.4)">m</div>
+      </div>
+      <div class="end-arrow">→</div>
+      <div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:4px">END (공기 등가)</div>
+        <div style="font-size:36px;font-weight:800;color:#0ea5e9">${end.toFixed(1)}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.4)">m</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-label">절대압</div><div class="stat-value">${ata.toFixed(2)} ATA</div></div>
+      <div class="stat-box"><div class="stat-label">ppN₂</div><div class="stat-value">${pn.toFixed(2)} bar</div></div>
+      <div class="stat-box"><div class="stat-label">등가 O₂%</div><div class="stat-value">${fo.toFixed(1)}%</div></div>
+    </div>
+    ${pn<0?'<div class="status-bad">⚠️ ppO₂가 절대압보다 큽니다 — 이 수심에서는 불가능한 설정입니다</div>':''}
+    ${end>0&&end<ad?`<div class="status-ok">✓ 질소 노출 ${(((ad-end)/ad)*100).toFixed(0)}% 감소 — 공기 잠수 대비 ${ad}m → ${end.toFixed(0)}m 수준</div>`:''}`;
+
+  const depths=[20,30,40,50,60,70,80,90,100];
+  const rows=depths.map(d=>{
+    const a=1+d/10,p2=a-pp,e2=(p2/0.79-1)*10,f2=(pp/a)*100;
+    const hl=d===ad?'background:rgba(14,165,233,0.08)':'';
+    return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);${hl}"><td>${d}</td><td>${p2.toFixed(2)}</td><td>${f2.toFixed(1)}%</td><td style="color:${p2<0?'#ef4444':'#0ea5e9'};font-weight:700">${p2<0?'N/A':e2.toFixed(1)}</td></tr>`;
+  }).join('');
+
+  document.getElementById('e-table').innerHTML =
+    `<div class="section-title">ppO₂ ${pp} bar 기준 수심별 END</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.1)"><th>수심 (m)</th><th>ppN₂</th><th>등가 O₂%</th><th>END (m)</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+// ─── Init ───
+initTabs();
+initUnit();
+initGas();
+initRMV();
+initMOD();
+initBM();
+initEND();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
