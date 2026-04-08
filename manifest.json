@@ -1,0 +1,22 @@
+{
+  "name": "다이빙 계산기",
+  "short_name": "DiveCalc",
+  "description": "다이빙 가스 소모, RMV, MOD, END 계산기",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0c1222",
+  "theme_color": "#0c1222",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
